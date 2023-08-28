@@ -13,14 +13,22 @@ type Game struct {
 }
 
 func NewGame(player *Player) *Game {
+	_uuid := uuid.New()
+
 	game := &Game{
 		Game: &pb.Game{
-			Uuid: uuid.New().String(),
+			Uuid: _uuid.String(),
 		},
 		Players: []*Player{player},
 		Seed:    rand.Int(),
 	}
-	games = append(games, game)
 
+	player.InGame = true
+	players = append(players, player)
+	games[_uuid] = game
 	return game
+}
+
+func GetGameFromStringId(id string) *Game {
+	return games[uuid.MustParse(id)]
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"log"
@@ -14,12 +15,15 @@ const (
 	keyFile  = "cert.key"
 )
 
-var games []*Game
+var games map[uuid.UUID]*Game
+var players []*Player
 
 func main() {
+	games = make(map[uuid.UUID]*Game)
+
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
-		log.Fatalf("Error loading ssl certificate {%s}\n", err)
+		log.Fatalf("Error loading ssl certificate {%s}\nAdd cert.crt and cert.key files\n", err)
 	}
 
 	config := tls.Config{
