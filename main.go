@@ -16,10 +16,11 @@ const (
 )
 
 var games map[uuid.UUID]*Game
-var players []*Player
+var players map[string]*Player
 
 func main() {
 	games = make(map[uuid.UUID]*Game)
+	players = make(map[string]*Player)
 
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
@@ -37,7 +38,10 @@ func main() {
 	}
 
 	s := grpc.NewServer()
+
 	pb.RegisterGameServiceServer(s, &GameService{})
+	pb.RegisterPlayerServiceServer(s, &PlayerService{})
+
 	log.Println("Listening on:", listener.Addr())
 
 	reflection.Register(s)

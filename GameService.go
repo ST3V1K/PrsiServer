@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"google.golang.org/grpc/peer"
 	pb "server/grpc"
 )
 
@@ -11,44 +10,51 @@ type GameService struct {
 }
 
 func (s *GameService) Join(ctx context.Context, in *pb.GameRequest) (*pb.GameJoinResponse, error) {
-	p, ok := peer.FromContext(ctx)
-	player := GetOrCreatePlayer(in.Player, p.Addr)
-	game := GetGameFromStringId(in.Game.Uuid)
-
-	if !ok || player.InGame {
+	if !ValidatePlayer(in.Player) {
 		return &pb.GameJoinResponse{}, nil
 	}
 
-	game.Players = append(game.Players, player)
+	player := GetPlayer(in.Player)
+
+	if player.InGame {
+		return &pb.GameJoinResponse{}, nil
+	}
+
+	game := GetGameFromStringId(in.Game.Uuid)
+	var opponentName string
+	for opponentName = range game.Players {
+		break
+	}
+	game.Players[player.Name] = player
+
 	return &pb.GameJoinResponse{
-		OpponentName: game.Players[0].Name,
+		OpponentName: opponentName,
 	}, nil
 }
 
 func (s *GameService) Leave(ctx context.Context, in *pb.GameRequest) (*pb.SuccessResponse, error) {
 	//TODO: Inform player of winning
 
-	game := GetGameFromStringId(in.Game.Uuid)
-
-	for i, player := range game.Players {
-		if player.Equals(in.Player) {
-			game.Players = append(game.Players[:i], game.Players[i+1:]...)
-			return &pb.SuccessResponse{
-				Success: true,
-			}, nil
-		}
+	if !ValidatePlayer(in.Player) {
+		return &pb.SuccessResponse{}, nil
 	}
 
+	game := GetGameFromStringId(in.Game.Uuid)
+	game.DisconnectPlayer(in.Player.Name)
+
 	return &pb.SuccessResponse{
-		Success: false,
+		Success: true,
 	}, nil
 }
 
-func (s *GameService) NewGame(ctx context.Context, in *pb.PlayerRequest) (*pb.GameCreateResponse, error) {
-	p, ok := peer.FromContext(ctx)
-	player := GetOrCreatePlayer(in.Player, p.Addr)
+func (s *GameService) NewGame(ctx context.Context, in *pb.Player) (*pb.GameCreateResponse, error) {
+	if !ValidatePlayer(in) {
+		return &pb.GameCreateResponse{}, nil
+	}
 
-	if !ok || player.InGame {
+	player := GetPlayer(in)
+
+	if player.InGame {
 		return &pb.GameCreateResponse{}, nil
 	}
 
@@ -58,11 +64,17 @@ func (s *GameService) NewGame(ctx context.Context, in *pb.PlayerRequest) (*pb.Ga
 	}, nil
 }
 
-func (s *GameService) ListGames(ctx context.Context, in *pb.PlayerRequest) (*pb.ListGamesResponse, error) {
+func (s *GameService) ListGames(ctx context.Context, in *pb.Player) (*pb.ListGamesResponse, error) {
+	if !ValidatePlayer(in) {
+		return &pb.ListGamesResponse{}, nil
+	}
+
 	var ids []*pb.Game
 
 	for id := range games {
-		ids = append(ids, &pb.Game{Uuid: id.String()})
+		ids = append(ids, &pb.Game{
+			Uuid: id.String(),
+		})
 	}
 
 	return &pb.ListGamesResponse{

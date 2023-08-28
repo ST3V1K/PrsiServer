@@ -8,27 +8,37 @@ import (
 
 type Game struct {
 	*pb.Game
-	Players []*Player
-	Seed    int `default:"rand.Int()"`
+	Players map[string]*Player
+	Seed    int
 }
 
 func NewGame(player *Player) *Game {
 	_uuid := uuid.New()
 
+	playersMap := make(map[string]*Player)
+	playersMap[player.Name] = player
+
 	game := &Game{
 		Game: &pb.Game{
 			Uuid: _uuid.String(),
 		},
-		Players: []*Player{player},
+		Players: playersMap,
 		Seed:    rand.Int(),
 	}
 
 	player.InGame = true
-	players = append(players, player)
+	players[player.Name] = player
 	games[_uuid] = game
 	return game
 }
 
 func GetGameFromStringId(id string) *Game {
 	return games[uuid.MustParse(id)]
+}
+
+func (game *Game) DisconnectPlayer(playerName string) {
+	delete(game.Players, playerName)
+	if len(game.Players) == 0 {
+		delete(games, uuid.MustParse(game.Uuid))
+	}
 }
