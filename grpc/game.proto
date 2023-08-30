@@ -4,7 +4,7 @@ option go_package = "./server";
 package server;
 
 service GameService {
-  rpc NewGame(Player) returns (GameCreateResponse) {}
+  rpc NewGame(Player) returns (stream GameCreateResponse) {}
   rpc RemoveGame(GameRequest) returns (SuccessResponse) {}
   rpc Join(GameRequest) returns (GameJoinResponse) {}
   rpc Leave(GameRequest) returns (SuccessResponse) {}

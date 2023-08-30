@@ -31,7 +31,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GameServiceClient interface {
-	NewGame(ctx context.Context, in *Player, opts ...grpc.CallOption) (*GameCreateResponse, error)
+	NewGame(ctx context.Context, in *Player, opts ...grpc.CallOption) (GameService_NewGameClient, error)
 	RemoveGame(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 	Join(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*GameJoinResponse, error)
 	Leave(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
@@ -47,13 +47,36 @@ func NewGameServiceClient(cc grpc.ClientConnInterface) GameServiceClient {
 	return &gameServiceClient{cc}
 }
 
-func (c *gameServiceClient) NewGame(ctx context.Context, in *Player, opts ...grpc.CallOption) (*GameCreateResponse, error) {
-	out := new(GameCreateResponse)
-	err := c.cc.Invoke(ctx, GameService_NewGame_FullMethodName, in, out, opts...)
+func (c *gameServiceClient) NewGame(ctx context.Context, in *Player, opts ...grpc.CallOption) (GameService_NewGameClient, error) {
+	stream, err := c.cc.NewStream(ctx, &GameService_ServiceDesc.Streams[0], GameService_NewGame_FullMethodName, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &gameServiceNewGameClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type GameService_NewGameClient interface {
+	Recv() (*GameCreateResponse, error)
+	grpc.ClientStream
+}
+
+type gameServiceNewGameClient struct {
+	grpc.ClientStream
+}
+
+func (x *gameServiceNewGameClient) Recv() (*GameCreateResponse, error) {
+	m := new(GameCreateResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *gameServiceClient) RemoveGame(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error) {
@@ -105,7 +128,7 @@ func (c *gameServiceClient) ListGamesFiltered(ctx context.Context, in *FilteredG
 // All implementations must embed UnimplementedGameServiceServer
 // for forward compatibility
 type GameServiceServer interface {
-	NewGame(context.Context, *Player) (*GameCreateResponse, error)
+	NewGame(*Player, GameService_NewGameServer) error
 	RemoveGame(context.Context, *GameRequest) (*SuccessResponse, error)
 	Join(context.Context, *GameRequest) (*GameJoinResponse, error)
 	Leave(context.Context, *GameRequest) (*SuccessResponse, error)
@@ -118,8 +141,8 @@ type GameServiceServer interface {
 type UnimplementedGameServiceServer struct {
 }
 
-func (UnimplementedGameServiceServer) NewGame(context.Context, *Player) (*GameCreateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NewGame not implemented")
+func (UnimplementedGameServiceServer) NewGame(*Player, GameService_NewGameServer) error {
+	return status.Errorf(codes.Unimplemented, "method NewGame not implemented")
 }
 func (UnimplementedGameServiceServer) RemoveGame(context.Context, *GameRequest) (*SuccessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveGame not implemented")
@@ -149,22 +172,25 @@ func RegisterGameServiceServer(s grpc.ServiceRegistrar, srv GameServiceServer) {
 	s.RegisterService(&GameService_ServiceDesc, srv)
 }
 
-func _GameService_NewGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Player)
-	if err := dec(in); err != nil {
-		return nil, err
+func _GameService_NewGame_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Player)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(GameServiceServer).NewGame(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: GameService_NewGame_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServiceServer).NewGame(ctx, req.(*Player))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(GameServiceServer).NewGame(m, &gameServiceNewGameServer{stream})
+}
+
+type GameService_NewGameServer interface {
+	Send(*GameCreateResponse) error
+	grpc.ServerStream
+}
+
+type gameServiceNewGameServer struct {
+	grpc.ServerStream
+}
+
+func (x *gameServiceNewGameServer) Send(m *GameCreateResponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _GameService_RemoveGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -265,10 +291,6 @@ var GameService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*GameServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "NewGame",
-			Handler:    _GameService_NewGame_Handler,
-		},
-		{
 			MethodName: "RemoveGame",
 			Handler:    _GameService_RemoveGame_Handler,
 		},
@@ -289,6 +311,12 @@ var GameService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GameService_ListGamesFiltered_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "NewGame",
+			Handler:       _GameService_NewGame_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "game.proto",
 }
