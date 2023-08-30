@@ -19,10 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	GameService_NewGame_FullMethodName   = "/server.GameService/NewGame"
-	GameService_Join_FullMethodName      = "/server.GameService/Join"
-	GameService_Leave_FullMethodName     = "/server.GameService/Leave"
-	GameService_ListGames_FullMethodName = "/server.GameService/ListGames"
+	GameService_NewGame_FullMethodName           = "/server.GameService/NewGame"
+	GameService_RemoveGame_FullMethodName        = "/server.GameService/RemoveGame"
+	GameService_Join_FullMethodName              = "/server.GameService/Join"
+	GameService_Leave_FullMethodName             = "/server.GameService/Leave"
+	GameService_ListGames_FullMethodName         = "/server.GameService/ListGames"
+	GameService_ListGamesFiltered_FullMethodName = "/server.GameService/ListGamesFiltered"
 )
 
 // GameServiceClient is the client API for GameService service.
@@ -30,9 +32,11 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GameServiceClient interface {
 	NewGame(ctx context.Context, in *Player, opts ...grpc.CallOption) (*GameCreateResponse, error)
+	RemoveGame(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 	Join(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*GameJoinResponse, error)
 	Leave(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 	ListGames(ctx context.Context, in *Player, opts ...grpc.CallOption) (*ListGamesResponse, error)
+	ListGamesFiltered(ctx context.Context, in *FilteredGamesRequest, opts ...grpc.CallOption) (*ListGamesResponse, error)
 }
 
 type gameServiceClient struct {
@@ -46,6 +50,15 @@ func NewGameServiceClient(cc grpc.ClientConnInterface) GameServiceClient {
 func (c *gameServiceClient) NewGame(ctx context.Context, in *Player, opts ...grpc.CallOption) (*GameCreateResponse, error) {
 	out := new(GameCreateResponse)
 	err := c.cc.Invoke(ctx, GameService_NewGame_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gameServiceClient) RemoveGame(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error) {
+	out := new(SuccessResponse)
+	err := c.cc.Invoke(ctx, GameService_RemoveGame_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,14 +92,25 @@ func (c *gameServiceClient) ListGames(ctx context.Context, in *Player, opts ...g
 	return out, nil
 }
 
+func (c *gameServiceClient) ListGamesFiltered(ctx context.Context, in *FilteredGamesRequest, opts ...grpc.CallOption) (*ListGamesResponse, error) {
+	out := new(ListGamesResponse)
+	err := c.cc.Invoke(ctx, GameService_ListGamesFiltered_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GameServiceServer is the server API for GameService service.
 // All implementations must embed UnimplementedGameServiceServer
 // for forward compatibility
 type GameServiceServer interface {
 	NewGame(context.Context, *Player) (*GameCreateResponse, error)
+	RemoveGame(context.Context, *GameRequest) (*SuccessResponse, error)
 	Join(context.Context, *GameRequest) (*GameJoinResponse, error)
 	Leave(context.Context, *GameRequest) (*SuccessResponse, error)
 	ListGames(context.Context, *Player) (*ListGamesResponse, error)
+	ListGamesFiltered(context.Context, *FilteredGamesRequest) (*ListGamesResponse, error)
 	mustEmbedUnimplementedGameServiceServer()
 }
 
@@ -97,6 +121,9 @@ type UnimplementedGameServiceServer struct {
 func (UnimplementedGameServiceServer) NewGame(context.Context, *Player) (*GameCreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NewGame not implemented")
 }
+func (UnimplementedGameServiceServer) RemoveGame(context.Context, *GameRequest) (*SuccessResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveGame not implemented")
+}
 func (UnimplementedGameServiceServer) Join(context.Context, *GameRequest) (*GameJoinResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Join not implemented")
 }
@@ -105,6 +132,9 @@ func (UnimplementedGameServiceServer) Leave(context.Context, *GameRequest) (*Suc
 }
 func (UnimplementedGameServiceServer) ListGames(context.Context, *Player) (*ListGamesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListGames not implemented")
+}
+func (UnimplementedGameServiceServer) ListGamesFiltered(context.Context, *FilteredGamesRequest) (*ListGamesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListGamesFiltered not implemented")
 }
 func (UnimplementedGameServiceServer) mustEmbedUnimplementedGameServiceServer() {}
 
@@ -133,6 +163,24 @@ func _GameService_NewGame_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(GameServiceServer).NewGame(ctx, req.(*Player))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GameService_RemoveGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GameServiceServer).RemoveGame(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GameService_RemoveGame_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GameServiceServer).RemoveGame(ctx, req.(*GameRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -191,6 +239,24 @@ func _GameService_ListGames_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GameService_ListGamesFiltered_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FilteredGamesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GameServiceServer).ListGamesFiltered(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GameService_ListGamesFiltered_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GameServiceServer).ListGamesFiltered(ctx, req.(*FilteredGamesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GameService_ServiceDesc is the grpc.ServiceDesc for GameService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -203,6 +269,10 @@ var GameService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GameService_NewGame_Handler,
 		},
 		{
+			MethodName: "RemoveGame",
+			Handler:    _GameService_RemoveGame_Handler,
+		},
+		{
 			MethodName: "Join",
 			Handler:    _GameService_Join_Handler,
 		},
@@ -213,6 +283,10 @@ var GameService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListGames",
 			Handler:    _GameService_ListGames_Handler,
+		},
+		{
+			MethodName: "ListGamesFiltered",
+			Handler:    _GameService_ListGamesFiltered_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

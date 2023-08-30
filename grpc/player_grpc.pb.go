@@ -28,7 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PlayerServiceClient interface {
 	Login(ctx context.Context, in *PlayerName, opts ...grpc.CallOption) (*PlayerPassword, error)
-	Logout(ctx context.Context, in *Player, opts ...grpc.CallOption) (*SuccessResponse, error)
+	Logout(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 }
 
 type playerServiceClient struct {
@@ -48,7 +48,7 @@ func (c *playerServiceClient) Login(ctx context.Context, in *PlayerName, opts ..
 	return out, nil
 }
 
-func (c *playerServiceClient) Logout(ctx context.Context, in *Player, opts ...grpc.CallOption) (*SuccessResponse, error) {
+func (c *playerServiceClient) Logout(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error) {
 	out := new(SuccessResponse)
 	err := c.cc.Invoke(ctx, PlayerService_Logout_FullMethodName, in, out, opts...)
 	if err != nil {
@@ -62,7 +62,7 @@ func (c *playerServiceClient) Logout(ctx context.Context, in *Player, opts ...gr
 // for forward compatibility
 type PlayerServiceServer interface {
 	Login(context.Context, *PlayerName) (*PlayerPassword, error)
-	Logout(context.Context, *Player) (*SuccessResponse, error)
+	Logout(context.Context, *GameRequest) (*SuccessResponse, error)
 	mustEmbedUnimplementedPlayerServiceServer()
 }
 
@@ -73,7 +73,7 @@ type UnimplementedPlayerServiceServer struct {
 func (UnimplementedPlayerServiceServer) Login(context.Context, *PlayerName) (*PlayerPassword, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
-func (UnimplementedPlayerServiceServer) Logout(context.Context, *Player) (*SuccessResponse, error) {
+func (UnimplementedPlayerServiceServer) Logout(context.Context, *GameRequest) (*SuccessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
 func (UnimplementedPlayerServiceServer) mustEmbedUnimplementedPlayerServiceServer() {}
@@ -108,7 +108,7 @@ func _PlayerService_Login_Handler(srv interface{}, ctx context.Context, dec func
 }
 
 func _PlayerService_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Player)
+	in := new(GameRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func _PlayerService_Logout_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: PlayerService_Logout_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PlayerServiceServer).Logout(ctx, req.(*Player))
+		return srv.(PlayerServiceServer).Logout(ctx, req.(*GameRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
