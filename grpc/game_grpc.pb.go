@@ -33,7 +33,7 @@ const (
 type GameServiceClient interface {
 	NewGame(ctx context.Context, in *Player, opts ...grpc.CallOption) (GameService_NewGameClient, error)
 	RemoveGame(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
-	Join(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*GameJoinResponse, error)
+	Join(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (GameService_JoinClient, error)
 	Leave(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 	ListGames(ctx context.Context, in *Player, opts ...grpc.CallOption) (*ListGamesResponse, error)
 	ListGamesFiltered(ctx context.Context, in *FilteredGamesRequest, opts ...grpc.CallOption) (*ListGamesResponse, error)
@@ -63,7 +63,7 @@ func (c *gameServiceClient) NewGame(ctx context.Context, in *Player, opts ...grp
 }
 
 type GameService_NewGameClient interface {
-	Recv() (*GameCreateResponse, error)
+	Recv() (*GameStream, error)
 	grpc.ClientStream
 }
 
@@ -71,8 +71,8 @@ type gameServiceNewGameClient struct {
 	grpc.ClientStream
 }
 
-func (x *gameServiceNewGameClient) Recv() (*GameCreateResponse, error) {
-	m := new(GameCreateResponse)
+func (x *gameServiceNewGameClient) Recv() (*GameStream, error) {
+	m := new(GameStream)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -88,13 +88,36 @@ func (c *gameServiceClient) RemoveGame(ctx context.Context, in *GameRequest, opt
 	return out, nil
 }
 
-func (c *gameServiceClient) Join(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*GameJoinResponse, error) {
-	out := new(GameJoinResponse)
-	err := c.cc.Invoke(ctx, GameService_Join_FullMethodName, in, out, opts...)
+func (c *gameServiceClient) Join(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (GameService_JoinClient, error) {
+	stream, err := c.cc.NewStream(ctx, &GameService_ServiceDesc.Streams[1], GameService_Join_FullMethodName, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &gameServiceJoinClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type GameService_JoinClient interface {
+	Recv() (*GameStream, error)
+	grpc.ClientStream
+}
+
+type gameServiceJoinClient struct {
+	grpc.ClientStream
+}
+
+func (x *gameServiceJoinClient) Recv() (*GameStream, error) {
+	m := new(GameStream)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *gameServiceClient) Leave(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error) {
@@ -130,7 +153,7 @@ func (c *gameServiceClient) ListGamesFiltered(ctx context.Context, in *FilteredG
 type GameServiceServer interface {
 	NewGame(*Player, GameService_NewGameServer) error
 	RemoveGame(context.Context, *GameRequest) (*SuccessResponse, error)
-	Join(context.Context, *GameRequest) (*GameJoinResponse, error)
+	Join(*GameRequest, GameService_JoinServer) error
 	Leave(context.Context, *GameRequest) (*SuccessResponse, error)
 	ListGames(context.Context, *Player) (*ListGamesResponse, error)
 	ListGamesFiltered(context.Context, *FilteredGamesRequest) (*ListGamesResponse, error)
@@ -147,8 +170,8 @@ func (UnimplementedGameServiceServer) NewGame(*Player, GameService_NewGameServer
 func (UnimplementedGameServiceServer) RemoveGame(context.Context, *GameRequest) (*SuccessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveGame not implemented")
 }
-func (UnimplementedGameServiceServer) Join(context.Context, *GameRequest) (*GameJoinResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Join not implemented")
+func (UnimplementedGameServiceServer) Join(*GameRequest, GameService_JoinServer) error {
+	return status.Errorf(codes.Unimplemented, "method Join not implemented")
 }
 func (UnimplementedGameServiceServer) Leave(context.Context, *GameRequest) (*SuccessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Leave not implemented")
@@ -181,7 +204,7 @@ func _GameService_NewGame_Handler(srv interface{}, stream grpc.ServerStream) err
 }
 
 type GameService_NewGameServer interface {
-	Send(*GameCreateResponse) error
+	Send(*GameStream) error
 	grpc.ServerStream
 }
 
@@ -189,7 +212,7 @@ type gameServiceNewGameServer struct {
 	grpc.ServerStream
 }
 
-func (x *gameServiceNewGameServer) Send(m *GameCreateResponse) error {
+func (x *gameServiceNewGameServer) Send(m *GameStream) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -211,22 +234,25 @@ func _GameService_RemoveGame_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GameService_Join_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GameRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _GameService_Join_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GameRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(GameServiceServer).Join(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: GameService_Join_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServiceServer).Join(ctx, req.(*GameRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(GameServiceServer).Join(m, &gameServiceJoinServer{stream})
+}
+
+type GameService_JoinServer interface {
+	Send(*GameStream) error
+	grpc.ServerStream
+}
+
+type gameServiceJoinServer struct {
+	grpc.ServerStream
+}
+
+func (x *gameServiceJoinServer) Send(m *GameStream) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _GameService_Leave_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -295,10 +321,6 @@ var GameService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GameService_RemoveGame_Handler,
 		},
 		{
-			MethodName: "Join",
-			Handler:    _GameService_Join_Handler,
-		},
-		{
 			MethodName: "Leave",
 			Handler:    _GameService_Leave_Handler,
 		},
@@ -315,6 +337,11 @@ var GameService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "NewGame",
 			Handler:       _GameService_NewGame_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "Join",
+			Handler:       _GameService_Join_Handler,
 			ServerStreams: true,
 		},
 	},

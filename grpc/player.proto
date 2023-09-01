@@ -1,5 +1,6 @@
 syntax = "proto3";
 
+option  csharp_namespace = "Prsi.Server";
 option go_package = "./server";
 package server;
 
