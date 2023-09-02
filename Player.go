@@ -1,14 +1,17 @@
 package main
 
 import (
+	"github.com/google/uuid"
 	"math/rand"
 	pb "server/grpc"
 )
 
 type Player struct {
 	*pb.Player
-	InGame bool
-	Hand   []any
+	InGame     bool
+	Hand       map[string]*pb.Card
+	StreamNew  *pb.GameService_NewGameServer
+	StreamJoin *pb.GameService_JoinServer
 }
 
 func NewPlayer(name string) *Player {
@@ -43,4 +46,48 @@ func ValidatePlayer(player *pb.Player) bool {
 		return p.Password == player.Password
 	}
 	return false
+}
+
+func Surrender(game *pb.Game, player *pb.Player) {
+	// TODO
+	id, _ := uuid.Parse(game.GetUuid())
+
+	if _, ok := games[id]; ok {
+		delete(games, id)
+	}
+}
+
+func (p *Player) FillHand(seed int) {
+	//TODO
+}
+
+func (p *Player) InformPlayerOfPlay(gameStream *pb.GameStream, card *pb.Card) error {
+	gameStream.Card = card
+	if p.StreamJoin != nil {
+		return (*p.StreamJoin).Send(gameStream)
+	}
+	return (*p.StreamNew).Send(gameStream)
+}
+
+func (p *Player) InformPlayerOfDraw(gameStream *pb.GameStream, draw *int32) error {
+	gameStream.Draw = draw
+	if p.StreamJoin != nil {
+		return (*p.StreamJoin).Send(gameStream)
+	}
+	return (*p.StreamNew).Send(gameStream)
+}
+
+func (p *Player) InformPlayerOfStand() error {
+	if p.StreamJoin != nil {
+		return (*p.StreamJoin).Send(&pb.GameStream{})
+	}
+	return (*p.StreamNew).Send(&pb.GameStream{})
+}
+
+func (p *Player) InformPlayerOfTie() error {
+	out := true
+	if p.StreamJoin != nil {
+		return (*p.StreamJoin).Send(&pb.GameStream{Tie: &out})
+	}
+	return (*p.StreamNew).Send(&pb.GameStream{Tie: &out})
 }

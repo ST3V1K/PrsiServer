@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	pb "server/grpc"
 )
 
@@ -15,6 +16,7 @@ func (s *PlayerService) Login(ctx context.Context, in *pb.PlayerName) (*pb.Playe
 	}
 
 	player := NewPlayer(in.Name)
+	log.Println(in.Name, "logged in")
 
 	players[in.Name] = player
 	return &pb.PlayerPassword{
@@ -22,14 +24,16 @@ func (s *PlayerService) Login(ctx context.Context, in *pb.PlayerName) (*pb.Playe
 	}, nil
 }
 
-func (s *PlayerService) Logout(ctx context.Context, in *pb.Player) (*pb.SuccessResponse, error) {
-	// TODO: remove player from active game and notify other of winning
-
-	if !ValidatePlayer(in) {
+func (s *PlayerService) Logout(ctx context.Context, in *pb.GameRequest) (*pb.SuccessResponse, error) {
+	if !ValidatePlayer(in.Player) {
 		return &pb.SuccessResponse{}, nil
 	}
 
-	delete(players, GetPlayer(in).Name)
+	log.Println(in.Player.Name, "logged out")
+
+	Surrender(in.Game, in.Player)
+	delete(players, in.Player.Name)
+
 	return &pb.SuccessResponse{
 		Success: true,
 	}, nil

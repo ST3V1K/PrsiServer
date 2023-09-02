@@ -23,6 +23,7 @@ const (
 	GameService_RemoveGame_FullMethodName        = "/server.GameService/RemoveGame"
 	GameService_Join_FullMethodName              = "/server.GameService/Join"
 	GameService_Leave_FullMethodName             = "/server.GameService/Leave"
+	GameService_RequestTie_FullMethodName        = "/server.GameService/RequestTie"
 	GameService_ListGames_FullMethodName         = "/server.GameService/ListGames"
 	GameService_ListGamesFiltered_FullMethodName = "/server.GameService/ListGamesFiltered"
 )
@@ -35,6 +36,7 @@ type GameServiceClient interface {
 	RemoveGame(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 	Join(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (GameService_JoinClient, error)
 	Leave(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
+	RequestTie(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error)
 	ListGames(ctx context.Context, in *Player, opts ...grpc.CallOption) (*ListGamesResponse, error)
 	ListGamesFiltered(ctx context.Context, in *FilteredGamesRequest, opts ...grpc.CallOption) (*ListGamesResponse, error)
 }
@@ -129,6 +131,15 @@ func (c *gameServiceClient) Leave(ctx context.Context, in *GameRequest, opts ...
 	return out, nil
 }
 
+func (c *gameServiceClient) RequestTie(ctx context.Context, in *GameRequest, opts ...grpc.CallOption) (*SuccessResponse, error) {
+	out := new(SuccessResponse)
+	err := c.cc.Invoke(ctx, GameService_RequestTie_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *gameServiceClient) ListGames(ctx context.Context, in *Player, opts ...grpc.CallOption) (*ListGamesResponse, error) {
 	out := new(ListGamesResponse)
 	err := c.cc.Invoke(ctx, GameService_ListGames_FullMethodName, in, out, opts...)
@@ -155,6 +166,7 @@ type GameServiceServer interface {
 	RemoveGame(context.Context, *GameRequest) (*SuccessResponse, error)
 	Join(*GameRequest, GameService_JoinServer) error
 	Leave(context.Context, *GameRequest) (*SuccessResponse, error)
+	RequestTie(context.Context, *GameRequest) (*SuccessResponse, error)
 	ListGames(context.Context, *Player) (*ListGamesResponse, error)
 	ListGamesFiltered(context.Context, *FilteredGamesRequest) (*ListGamesResponse, error)
 	mustEmbedUnimplementedGameServiceServer()
@@ -175,6 +187,9 @@ func (UnimplementedGameServiceServer) Join(*GameRequest, GameService_JoinServer)
 }
 func (UnimplementedGameServiceServer) Leave(context.Context, *GameRequest) (*SuccessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Leave not implemented")
+}
+func (UnimplementedGameServiceServer) RequestTie(context.Context, *GameRequest) (*SuccessResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestTie not implemented")
 }
 func (UnimplementedGameServiceServer) ListGames(context.Context, *Player) (*ListGamesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListGames not implemented")
@@ -273,6 +288,24 @@ func _GameService_Leave_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GameService_RequestTie_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GameServiceServer).RequestTie(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GameService_RequestTie_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GameServiceServer).RequestTie(ctx, req.(*GameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _GameService_ListGames_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Player)
 	if err := dec(in); err != nil {
@@ -323,6 +356,10 @@ var GameService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Leave",
 			Handler:    _GameService_Leave_Handler,
+		},
+		{
+			MethodName: "RequestTie",
+			Handler:    _GameService_RequestTie_Handler,
 		},
 		{
 			MethodName: "ListGames",

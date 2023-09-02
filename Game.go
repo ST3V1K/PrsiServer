@@ -8,12 +8,16 @@ import (
 
 type Game struct {
 	*pb.Game
-	Players map[string]*Player
-	Seed    int
+	Players  map[string]*Player
+	Seed     int32
+	LastCard *pb.Card
+	Finished bool
 }
 
 func NewGame(player *Player) *Game {
 	_uuid := uuid.New()
+
+	//player.FillHand()
 
 	playersMap := make(map[string]*Player)
 	playersMap[player.Name] = player
@@ -23,7 +27,7 @@ func NewGame(player *Player) *Game {
 			Uuid: _uuid.String(),
 		},
 		Players: playersMap,
-		Seed:    rand.Int(),
+		Seed:    rand.Int31(),
 	}
 
 	player.InGame = true
@@ -41,4 +45,39 @@ func (game *Game) DisconnectPlayer(playerName string) {
 	if len(game.Players) == 0 {
 		delete(games, uuid.MustParse(game.Uuid))
 	}
+}
+
+func (game *Game) PlayCard(card *pb.Card, playerName string) {
+	for name, player := range game.Players {
+		if name != playerName {
+			if _, ok := player.Hand[card.String()]; ok {
+				delete(player.Hand, card.String())
+			}
+			break
+		}
+	}
+
+	game.LastCard = card
+}
+
+func (game *Game) DrawCard(draw int32, playerName string) {
+	for name := range game.Players {
+		if name != playerName {
+			// TODO: add to hand
+			break
+		}
+	}
+}
+
+func (game *Game) CanBePlayed(card *pb.Card) bool {
+	// TODO: be more specific
+	/*
+		color := game.LastCard.Color == card.Color
+		number := game.LastCard.Value == card.Value
+		changeColor := card.Value == 12
+		wasChanged := game.LastCard.Value == 12
+
+		return color || number || changeColor || wasChanged
+	*/
+	return true
 }
