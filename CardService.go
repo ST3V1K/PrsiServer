@@ -25,7 +25,6 @@ func (s *CardService) Play(ctx context.Context, in *pb.PlayCardRequest) (*pb.Suc
 			}, in.Card)
 			if err != nil {
 				panic(err)
-				return nil, err
 			}
 			break
 		}
@@ -52,7 +51,6 @@ func (s *CardService) Draw(ctx context.Context, in *pb.DrawCardRequest) (*pb.Suc
 			}, &in.Draw)
 			if err != nil {
 				panic(err)
-				return nil, err
 			}
 			break
 		}
@@ -75,7 +73,6 @@ func (s *CardService) Stand(ctx context.Context, in *pb.StandRequest) (*pb.Succe
 			err := player.InformPlayerOfStand()
 			if err != nil {
 				panic(err)
-				return nil, err
 			}
 			break
 		}

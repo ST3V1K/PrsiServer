@@ -85,7 +85,6 @@ func (s *GameService) NewGame(in *pb.Player, stream pb.GameService_NewGameServer
 
 	if err != nil {
 		panic(err)
-		return err
 	}
 
 	for len(game.Players) <= 1 {
@@ -103,7 +102,6 @@ func (s *GameService) NewGame(in *pb.Player, stream pb.GameService_NewGameServer
 	err = stream.Send(gameStream)
 	if err != nil {
 		panic(err)
-		return err
 	}
 
 	player.StreamNew = &stream
@@ -194,7 +192,6 @@ func (s *GameService) RequestTie(ctx context.Context, in *pb.GameRequest) (*pb.S
 			err := player.InformPlayerOfTie()
 			if err != nil {
 				panic(err)
-				return nil, err
 			}
 			break
 		}
