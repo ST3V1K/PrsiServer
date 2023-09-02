@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	"github.com/google/uuid"
 	pb "server/grpc"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 type GameService struct {
@@ -56,6 +57,7 @@ func (s *GameService) Leave(ctx context.Context, in *pb.GameRequest) (*pb.Succes
 
 	game := GetGameFromStringId(in.Game.Uuid)
 	game.DisconnectPlayer(in.Player.Name)
+	GetPlayer(in.Player).InGame = false
 
 	return &pb.SuccessResponse{
 		Success: true,
