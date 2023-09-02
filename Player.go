@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/google/uuid"
 	"math/rand"
 	pb "server/grpc"
+
+	"github.com/google/uuid"
 )
 
 type Player struct {
@@ -52,8 +53,10 @@ func Surrender(game *pb.Game, player *pb.Player) {
 	// TODO
 	id, _ := uuid.Parse(game.GetUuid())
 
-	if _, ok := games[id]; ok {
-		delete(games, id)
+	if game, ok := games[id]; ok {
+		if len(game.Players) == 0 {
+			delete(games, id)
+		}
 	}
 }
 
